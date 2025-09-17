@@ -41,7 +41,7 @@ module tb_vending_machine;
         begin
             btn = b;
             for(i=0;i<cycles;i=i+1) @(posedge clk);
-            btn = 4'b0000;
+            btn = 4'b1111;
             for(i=0;i<5;i=i+1) @(posedge clk); // 松开延时
         end
     endtask
@@ -49,20 +49,23 @@ module tb_vending_machine;
 task press_two_btns(input [3:0] btn1_mask, input [3:0] btn2_mask, input integer cycles);
     integer i;
     begin
-        // 同时按下两个按钮（按位或操作）
-        btn = btn1_mask | btn2_mask;
-        for(i=0;i<cycles;i=i+1) @(posedge clk);
-        btn = 4'b0000;                // 松开所有按键
-        for(i=0;i<5;i=i+1) @(posedge clk); // 松开延时
+        // 同时按下两个按钮（按位与操作，低电平有效）
+        btn = btn1_mask & btn2_mask;
+        for(i=0; i<cycles; i=i+1) @(posedge clk);
+
+        // 松开所有按键（全 1 表示全松开，因为低电平有效）
+        btn = 4'b1111;
+        for(i=0; i<5; i=i+1) @(posedge clk); // 松开延时
     end
 endtask
+
 
     // --------------------------
     // 初始化
     // --------------------------
     initial begin
         rst = 1;
-        btn = 0;
+        btn = 1;
         sw  = 0;
         @(posedge clk);
         @(posedge clk);
@@ -71,45 +74,91 @@ endtask
         // ----------------------
         // 1. 进入商品1选择 -> A11
         // ----------------------
-        press_btn(4'b0001, 2); // NEXT -> 进入 PROD1_SEL
+        press_btn(4'b1110, 2); // NEXT -> 进入 PROD1_SEL
         sw = 4'h0;              // A11
-        press_btn(4'b0010, 2); // ENTER -> 锁定商品1
+        press_btn(4'b1101, 2); // ENTER -> 锁定商品1
 
         // ----------------------
         // 2. 选择数量 1件
         // ----------------------
-        press_btn(4'b0001, 2); // NEXT -> 进入 QTY1_SEL
+        press_btn(4'b1110, 2); // NEXT -> 进入 QTY1_SEL
         sw = 4'b01;             // 数量 1
-        press_btn(4'b0010, 2); // ENTER -> 锁定数量1
+        press_btn(4'b1101, 2); // ENTER -> 锁定数量1
 
         // ----------------------
-        // 3. 选择商品2 -> A34
+        // 3. 选择商品2 -> A14
         // ----------------------
-        press_two_btns(4'b0001,4'b0010,2);
-        //press_btn(4'b0001, 2); // NEXT -> PROD2_SEL
-        //sw = 4'h3;              // A34
-        //press_btn(4'b0010, 2); // ENTER -> 锁定商品2
+        //press_two_btns(4'b1110,4'b1101,2);
+        press_btn(4'b1110, 2); // NEXT -> PROD2_SEL
+        sw = 4'h3;              // A34
+        press_btn(4'b1101, 2); // ENTER -> 锁定商品2
 
         // ----------------------
         // 4. 选择数量 2件
         // ----------------------
-       // press_btn(4'b0001, 2); // NEXT -> QTY2_SEL
-       // sw = 4'b10;             // 数量 2
-       // press_btn(4'b0010, 2); // ENTER -> 锁定数量2
+        press_btn(4'b1110, 2); // NEXT -> QTY2_SEL
+        sw = 4'b10;             // 数量 2
+        press_btn(4'b1101, 2); // ENTER -> 锁定数量2
 
         // ----------------------
-        // 5. 付款 -> 投入5元
+        // 5. 付款 
         // ----------------------
-        press_btn(4'b0001, 2); // NEXT -> PAYMENT
-        sw = 4'b001;            // 投入20元 (sw[2:1]=10)
-        press_btn(4'b0010, 1);  // ENTER -> 加入已付金额
+        press_btn(4'b1110, 2); // NEXT -> PAYMENT
+        sw = 4'b011;            // 投入20元 (sw[2:1]=10)
+        press_btn(4'b1101, 1);  // ENTER -> 加入已付金额
 
         // ----------------------
         // 6. 找零 -> 1元
         // ----------------------
-        press_btn(4'b0001, 2); // NEXT -> CHANGE
-        press_btn(4'b1000, 1); // CHANGE BTN 按下，减少找零1元
-        press_btn(4'b1000, 1);
+        press_btn(4'b1110, 2); // NEXT -> CHANGE
+        press_btn(4'b0111, 1); // CHANGE BTN 按下，减少找零1元
+        //press_btn(4'b0111, 1);
+
+press_btn(4'b1011,2);
+#200
+        // ----------------------
+        // 1. 进入商品1选择 -> A11
+        // ----------------------
+        press_btn(4'b1110, 2); // NEXT -> 进入 PROD1_SEL
+        sw = 4'h0;              // A11
+        press_btn(4'b1101, 2); // ENTER -> 锁定商品1
+
+        // ----------------------
+        // 2. 选择数量 1件
+        // ----------------------
+        press_btn(4'b1110, 2); // NEXT -> 进入 QTY1_SEL
+        sw = 4'b01;             // 数量 1
+        press_btn(4'b1101, 2); // ENTER -> 锁定数量1
+
+        // ----------------------
+        // 3. 选择商品2 -> A14
+        // ----------------------
+        press_two_btns(4'b1110,4'b1101,2);
+        //press_btn(4'b1110, 2); // NEXT -> PROD2_SEL
+        //sw = 4'h3;              // A34
+        //press_btn(4'b1101, 2); // ENTER -> 锁定商品2
+
+        // ----------------------
+        // 4. 选择数量 2件
+        // ----------------------
+        //press_btn(4'b1110, 2); // NEXT -> QTY2_SEL
+        //sw = 4'b10;             // 数量 2
+        //press_btn(4'b1101, 2); // ENTER -> 锁定数量2
+
+        // ----------------------
+        // 5. 付款 
+        // ----------------------
+        press_btn(4'b1110, 2); // NEXT -> PAYMENT
+        sw = 4'b001;            // 投入20元 (sw[2:1]=10)
+        press_btn(4'b1101, 1);  // ENTER -> 加入已付金额
+
+        // ----------------------
+        // 6. 找零 -> 1元
+        // ----------------------
+        press_btn(4'b1110, 2); // NEXT -> CHANGE
+        press_btn(4'b0111, 1); // CHANGE BTN 按下，减少找零1元
+        press_btn(4'b0111, 1);
+
 
         // ----------------------
         // 7. 回到初始状态
