@@ -15,7 +15,7 @@ module vending_machine(
     // ------------------------
     // 1?? 按键消抖
     // ------------------------
-     /*   wire btn[0], btn[1], btn[2], btn[3]; // 声明脉冲信号
+   /*    wire btn[0], btn[1], btn[2], btn[3]; // 声明脉冲信号
 
     debounce db0(.clk(clk), .rst(rst), .btn_in(btn[0]), .btn_out(), .btn_pulse(btn[0])); // .btn_out 可以不连接
     debounce db1(.clk(clk), .rst(rst), .btn_in(btn[1]), .btn_out(), .btn_pulse(btn[1]));
@@ -46,20 +46,20 @@ module vending_machine(
         always @(*) begin
         next_state = state; // 默认保持当前状态
         case(state)
-            IDLE: if(btn[0]) next_state=PROD1_SEL;
-            PROD1_SEL: if(btn[2]) next_state=IDLE;
-                       else if(prod1_locked && btn[0]) next_state=QTY1_SEL; // 必须是锁定了商品才允许进入数量选择
-            QTY1_SEL: if(btn[2]) next_state=IDLE;
-                      else if(qty1_locked && btn[0]) next_state=PROD2_SEL; // 必须是锁定了数量才允许进入第二件商品选择
-            PROD2_SEL: if(btn[2]) next_state=IDLE;
-                       else if(prod2_locked&&btn[0]) next_state=QTY2_SEL; // 选择了第二件商品，进入数量选择
-                       else if(btn[1]&&btn[0]) next_state=PAYMENT; // 不选择第二件商品，直接进入支付
-            QTY2_SEL: if(btn[2]) next_state=IDLE;
-                      else if(qty2_locked && btn[0]) next_state=PAYMENT; // 锁定了第二件商品数量，进入支付
-            PAYMENT: if(btn[2]) next_state=IDLE;
-                     else if((paid_amount >= total_price) && btn[0]) next_state=CHANGE; // 支付足够且按切换键才进入找零
-                     else if(btn[3]) next_state = IDLE; // 在支付期间按找零键，取消并找零
-            CHANGE: if(change_amount == 0 && btn[3]) next_state=IDLE; // 找零金额为0，且再次按找零键 (表示找零完成或放弃)，回到IDLE
+            IDLE: if(~btn[0]) next_state=PROD1_SEL;
+            PROD1_SEL: if(~btn[2]) next_state=IDLE;
+                       else if(prod1_locked && ~btn[0]) next_state=QTY1_SEL; // 必须是锁定了商品才允许进入数量选择
+            QTY1_SEL: if(~btn[2]) next_state=IDLE;
+                      else if(qty1_locked && ~btn[0]) next_state=PROD2_SEL; // 必须是锁定了数量才允许进入第二件商品选择
+            PROD2_SEL: if(~btn[2]) next_state=IDLE;
+                       else if(prod2_locked&&~btn[0]) next_state=QTY2_SEL; // 选择了第二件商品，进入数量选择
+                       else if(~btn[1]&&~btn[0]) next_state=PAYMENT; // 不选择第二件商品，直接进入支付
+            QTY2_SEL: if(~btn[2]) next_state=IDLE;
+                      else if(qty2_locked && ~btn[0]) next_state=PAYMENT; // 锁定了第二件商品数量，进入支付
+            PAYMENT: if(~btn[2]) next_state=IDLE;
+                     else if((paid_amount >= total_price) && ~btn[0]) next_state=CHANGE; // 支付足够且按切换键才进入找零
+                     else if(~btn[3]) next_state = IDLE; // 在支付期间按找零键，取消并找零
+            CHANGE: if(change_amount == 0 && ~btn[3]) next_state=IDLE; // 找零金额为0，且再次按找零键 (表示找零完成或放弃)，回到IDLE
                                                                         // 或者，更直接一点，当change_amount降到0时自动回IDLE
                                                                         // 但是你的需求是 "按三次手动找零键"，所以btn[3]是必须的
                                                                         // 所以，当change_amount==0时，按btn[3]才回IDLE更合理。
@@ -108,21 +108,21 @@ module vending_machine(
         end else begin
             state <= next_state;
 
-            if(btn[2]) begin
+            if(~btn[2]) begin
                 prod1_id<=0; prod2_id<=0;
                 qty1<=0; qty2<=0;
                 prod1_locked<=0; qty1_locked<=0;
                 prod2_locked<=0; qty2_locked<=0;
-                total_price<=0; paid_amount<=0; change_amount<=0;
+                total_price<=0; paid_amount<=0; change_amount<=128;
                 led<=8'b00000001;
             end else begin
                 case(state)
-                    PROD1_SEL: if(btn[1]) begin prod1_id<=sw[3:0]; prod1_locked<=1'b1; end
-                    QTY1_SEL:  if(btn[1] && sw[1:0]!=0) begin qty1<=sw[1:0]; qty1_locked<=1'b1; end
-                    PROD2_SEL: if(btn[1]) begin prod2_id<=sw[3:0]; prod2_locked<=1'b1; end
+                    PROD1_SEL: if(~btn[1]) begin prod1_id<=sw[3:0]; prod1_locked<=1'b1; end
+                    QTY1_SEL:  if(~btn[1] && sw[1:0]!=0) begin qty1<=sw[1:0]; qty1_locked<=1'b1; end
+                    PROD2_SEL: if(~btn[1]) begin prod2_id<=sw[3:0]; prod2_locked<=1'b1; end
                                //else if(!prod2_locked && enter_btn) begin qty2<=0; qty2_locked<=0; prod2_locked<=0; end
-                    QTY2_SEL:  if(btn[1] && sw[1:0]!=0) begin qty2<=sw[1:0]; qty2_locked<=1'b1; end
-                    PAYMENT:   if(btn[1]) begin
+                    QTY2_SEL:  if(~btn[1] && sw[1:0]!=0) begin qty2<=sw[1:0]; qty2_locked<=1'b1; end
+                    PAYMENT:   if(~btn[1]) begin
                                     if(sw[0]==0) paid_amount<=paid_amount+1;
                                     else case(sw[2:1])
                                         2'b00: paid_amount<=paid_amount+5;
@@ -133,7 +133,7 @@ module vending_machine(
                                end
                     CHANGE:    if(change_amount==128 && paid_amount>=total_price)
                                     change_amount<=paid_amount-total_price;
-                               else if(btn[3] && change_amount>0)
+                               else if(~btn[3] && change_amount>0)
                                     change_amount<=change_amount-1;
                 endcase
                 if(state!=QTY2_SEL) total_price <= computed_total[7:0];
