@@ -32,7 +32,7 @@ module top(
     // ------------------------
     // 3. 商品选择和数量    
     // ------------------------
-    reg [3:0] prod1_id, prod2_id,prod1_id1,prod2_id2;
+    reg [3:0] prod1_id, prod2_id;
     reg [1:0] qty1, qty2;
     reg prod1_locked, qty1_locked;
     reg prod2_locked, qty2_locked;
@@ -93,6 +93,19 @@ module top(
         end
     endfunction
 
+function [7:0] get_id;
+        input [3:0] prod;
+        begin
+            case(prod)
+                4'h0: get_id=11; 4'h1: get_id=12; 4'h2: get_id=13; 4'h3: get_id=14;
+                4'h4: get_id=21;4'h5: get_id=22; 4'h6: get_id=23; 4'h7: get_id=24;
+                4'h8: get_id=31; 4'h9: get_id=32; 4'hA: get_id=33;4'hB: get_id=34;
+                4'hC: get_id=41; 4'hD: get_id=42; 4'hE: get_id=43; 4'hF: get_id=44;
+                default: get_id=0;
+            endcase
+        end
+    endfunction
+
     // ------------------------
     // 总价计算
     // ------------------------
@@ -120,8 +133,8 @@ module top(
         end else begin
             case(state)
                 PROD1_SEL: if(btn_pulse[1]) begin 
-                    prod1_id <= sw[1:0];
-                    prod1_id1<= sw[3:2]; 
+                    prod1_id <= sw[3:0];
+                    
                     prod1_locked <= 1'b1;
                 end
                 
@@ -131,8 +144,8 @@ module top(
                 end
                 
                 PROD2_SEL: if(btn_pulse[1]) begin 
-                    prod2_id <= sw[1:0];
-                    prod2_id2<= sw[3:2]; 
+                    prod2_id <= sw[3:0];
+             
                     prod2_locked <= 1'b1;
                 end
                 
@@ -196,25 +209,25 @@ module top(
 
         case(state)
             PROD1_SEL: begin
-                seg_buffer0 = prod1_id1 +1;
-                seg_buffer1 = prod1_id +1;
+                seg_buffer0 = get_id(prod1_id)/10 ;
+                seg_buffer1 = get_id(prod1_id)%10  ;
             end
             
             QTY1_SEL: begin
-                seg_buffer0 = prod1_id +1;
-                seg_buffer1 = prod1_id1+1;
+                seg_buffer0 = get_id(prod1_id)/10 ;
+                seg_buffer1 = get_id(prod1_id)%10  ;
                 seg_buffer2 = qty1 / 10;
                 seg_buffer3 = qty1 % 10;
             end
             
             PROD2_SEL: begin
-                seg_buffer0 = prod2_id +1;
-                seg_buffer1 = prod2_id2 +1;
+                seg_buffer0 = get_id(prod2_id)/10;
+                seg_buffer1 = get_id(prod2_id)%10;
             end
             
             QTY2_SEL: begin
-                seg_buffer0 = prod2_id +1;
-                seg_buffer1 = prod2_id2+1;
+               seg_buffer0 = get_id(prod2_id)/10;
+                seg_buffer1 = get_id(prod2_id)%10;
                 seg_buffer2 = qty2 / 10;
                 seg_buffer3 = qty2 % 10;
             end
