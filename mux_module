@@ -1,0 +1,38 @@
+`timescale 1ns / 1ps
+
+/*
+ * 模块名称：mux_module (连接逻辑)
+ * 功能描述：负责寄存器输入端的数据选择（多路选择器逻辑）
+ */
+
+module mux_module(
+    // 控制信号
+    input C5, C10,            // MAR 输入选择
+    input C3, C11,            // MBR 输入选择
+    
+    // 数据输入 (来自各寄存器和外部 RAM)
+    input [7:0]  PC_out,      // 来自 PC
+    input [15:0] MBR_out,     // 来自 MBR
+    input [15:0] ACC_out,     // 来自 ACC
+    input [15:0] RAM_data_out,// 来自外部 RAM
+    
+    // 数据输出 (送往寄存器的输入端)
+    output reg [7:0]  next_MAR, // 准备存入 MAR 的值
+    output reg [15:0] next_MBR  // 准备存入 MBR 的值
+);
+
+    // MAR 的输入选择逻辑 (Figure 5: PC 和 MBR 都可以送往 MAR)
+    always @(*) begin
+        if (C5)        next_MAR = MBR_out[7:0]; // MBR 的地址码部分送 MAR
+        else if (C10)  next_MAR = PC_out;       // PC 送 MAR (取指准备)
+        else           next_MAR = 8'h00;        // 默认值
+    end
+
+    // MBR 的输入选择逻辑 (Figure 5: RAM 和 ACC 都可以送往 MBR)
+    always @(*) begin
+        if (C3)        next_MBR = RAM_data_out; // 从内存读入数据
+        else if (C11)  next_MBR = ACC_out;      // 累加器内容送 MBR (用于 STORE)
+        else           next_MBR = 16'h0000;     // 默认值
+    end
+
+endmodule
