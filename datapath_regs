@@ -1,0 +1,42 @@
+`timescale 1ns / 1ps
+
+module datapath_regs(
+    input clk, rst,
+    input C3, C4, C5, C6, C7, C8, C10, C11, C14, C15, C16,
+    input C9, C13, C17, C18, C19, C20, C21, C22, // 运算信号全部作为独立输入
+    
+    input [7:0]  next_MAR,
+    input [15:0] next_MBR,
+    input [15:0] ALU_res_ACC,
+    input [15:0] ALU_res_MR,
+    input        Flag_GEZ,
+    
+    output reg [7:0]  PC, MAR, IR,
+    output reg [15:0] MBR, ACC, BR, MR
+);
+
+    // 判断是否有任何 ALU 运算信号有效
+    wire alu_active;
+    assign alu_active = C9 | C13 | C17 | C18 | C19 | C20 | C21 | C22;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            PC <= 8'h00; MAR <= 8'h00; MBR <= 16'h0000;
+            IR <= 8'h00; ACC <= 16'h0000; BR <= 16'h0000; MR <= 16'h0000;
+        end else begin
+            if (C4)  IR  <= MBR[15:8];
+            if (C6)  PC  <= PC + 1;
+            else if (C14 && Flag_GEZ) PC <= MAR;
+            else if (C15) PC <= MAR;
+            
+            if (C5 || C10) MAR <= next_MAR;
+            if (C3 || C11) MBR <= next_MBR;
+            
+            if (C8)  ACC <= 16'h0000;
+            else if (alu_active) ACC <= ALU_res_ACC;
+            
+            if (C7)  BR  <= MBR;
+            if (C17) MR  <= ALU_res_MR; // 乘法时更新 MR
+        end
+    end
+endmodule
