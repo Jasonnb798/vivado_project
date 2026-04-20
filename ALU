@@ -1,0 +1,61 @@
+`timescale 1ns / 1ps
+
+
+module ALU(
+    // 数据输入
+    input  [15:0] ACC_in,      // 来自累加器 ACC 的当前值
+    input  [15:0] BR_in,       // 来自缓冲寄存器 BR 的值 (操作数)
+    
+    // 控制信号输入 (来自 Control Unit)
+    input  C9,                 // ACC_ADD: ACC + BR
+    input  C13,                // ACC_SUB: ACC - BR
+    input  C17,                // MULTIPLY: ACC * BR
+    input  C18,                // LOGIC_AND: ACC & BR
+    input  C19,                // LOGIC_OR: ACC | BR
+    input  C20,                // LOGIC_NOT: ~BR
+    input  C21,                // SHIFT_RIGHT: BR >> 1
+    input  C22,                // SHIFT_LEFT: BR << 1
+    
+    // 数据输出
+    output reg [15:0] ALU_Res_ACC, // 输出给 ACC 的计算结果
+    output reg [15:0] ALU_Res_MR,  // 输出给 MR 的计算结果 (用于乘法高16位)
+    
+    // 状态反馈给 CU
+    output Flag_GEZ            // 大于等于零标志位 (Greater or Equal to Zero)
+);
+
+    // 内部中间变量：用于存储 32 位的乘法结果
+    wire [31:0] mult_temp;
+    assign mult_temp = ACC_in * BR_in;
+
+    // 核心运算逻辑：根据控制信号选择输出结果
+    always @(*) begin
+        // 默认情况下，保持 ACC 原值，MR 清零，防止产生 Latches
+        ALU_Res_ACC = ACC_in;
+        ALU_Res_MR  = 16'h0000;
+        
+        case (1'b1)
+            C9:  ALU_Res_ACC = ACC_in + BR_in;           // 加法
+            C13: ALU_Res_ACC = ACC_in - BR_in;           // 减法
+            C17: begin                                   // 乘法
+                 ALU_Res_ACC = mult_temp[15:0];          // 低16位存入 ACC
+                 ALU_Res_MR  = mult_temp[31:16];         // 高16位存入 MR
+            end
+            C18: ALU_Res_ACC = ACC_in & BR_in;           // 逻辑与
+            C19: ALU_Res_ACC = ACC_in | BR_in;           // 逻辑或
+            C20: ALU_Res_ACC = ~BR_in;                   // 逻辑非 (对操作数取反)
+            C21: ALU_Res_ACC = {1'b0, BR_in[15:1]};      // 逻辑右移 1 位
+            C22: ALU_Res_ACC = {BR_in[14:0], 1'b0};      // 逻辑左移 1 位
+            
+            default: begin
+                 ALU_Res_ACC = ACC_in;
+                 ALU_Res_MR  = 16'h0000;
+            end
+        endcase
+    end
+
+    // 状态反馈逻辑：用于 JMPGEZ 指令 (C14 信号会用到)
+    // 根据补码规则，最高位 (MSB) 为 0 表示正数或零
+    assign Flag_GEZ = (ACC_in[15] == 1'b0) ? 1'b1 : 1'b0;
+
+endmodule
