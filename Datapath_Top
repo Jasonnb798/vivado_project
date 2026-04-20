@@ -1,0 +1,87 @@
+`timescale 1ns / 1ps
+
+/*
+ * 模块名称：Datapath_Top (数据通路顶层封装)
+ * 功能描述：将 Mux、ALU、Registers 三个子模块连接在一起。
+ * 外部接口说明：
+ *   - 输入：来自 CU 的控制信号 (C3-C22)、来自 RAM 的数据 (RAM_data_out)
+ *   - 输出：给 CU 的反馈 (Opcode, Flag_GEZ)、给 RAM 的接口 (MAR, MBR)
+ */
+
+module Datapath_Top(
+    input clk,
+    input rst,
+    
+    // --- 控制信号输入 (来自 Control Unit) ---
+    input C3, C4, C5, C6, C7, C8, C9, C10, C11, 
+    input C13, C14, C15, C16, C17, C18, C19, C20, C21, C22,
+    
+    // --- 存储器接口 ---
+    input  [15:0] RAM_data_out, // 从 RAM 读取的数据
+    output [7:0]  MAR_to_RAM,   // 输出给 RAM 的地址
+    output [15:0] MBR_to_RAM,   // 输出给 RAM 的数据 (用于 STORE)
+    
+    // --- 反馈给控制单元 (CU) 的信号 ---
+    output [7:0]  Opcode,       // 提取的操作码 (来自 IR)
+    output        Flag_GEZ      // 状态标志：ACC 是否 >= 0
+);
+
+    // --- 内部连接线 (Internal Wires) ---
+    // 1. 寄存器输出值
+    wire [7:0]  PC_val, MAR_val, IR_val;
+    wire [15:0] MBR_val, ACC_val, BR_val, MR_val;
+    
+    // 2. Mux 输出值 (准备存入寄存器)
+    wire [7:0]  next_MAR;
+    wire [15:0] next_MBR;
+    
+    // 3. ALU 输出值 (计算结果)
+    wire [15:0] ALU_res_ACC, ALU_res_MR;
+    wire        ALU_Flag_GEZ;
+
+    // --- 1. 实例化连接逻辑模块 (Mux) ---
+    mux_module mux_inst (
+        .C5(C5), .C10(C10), .C3(C3), .C11(C11),
+        .PC_out(PC_val), 
+        .MBR_out(MBR_val), 
+        .ACC_out(ACC_val), 
+        .RAM_data_out(RAM_data_out),
+        .next_MAR(next_MAR),
+        .next_MBR(next_MBR)
+    );
+
+    // --- 2. 实例化运算单元模块 (ALU) ---
+    ALU alu_inst (
+        .ACC_in(ACC_val),
+        .BR_in(BR_val),
+        .C9(C9), .C13(C13), .C17(C17), .C18(C18), 
+        .C19(C19), .C20(C20), .C21(C21), .C22(C22),
+        .ALU_Res_ACC(ALU_res_ACC),
+        .ALU_Res_MR(ALU_res_MR),
+        .Flag_GEZ(ALU_Flag_GEZ)
+    );
+
+    // --- 3. 实例化存储单元模块 (Registers) ---
+    // 在 Datapath_Top 内部实例化 regs_inst 时，修改连接方式：
+    datapath_regs regs_inst (
+        .clk(clk), .rst(rst),
+        .C3(C3), .C4(C4), .C5(C5), .C6(C6), .C7(C7), .C8(C8),
+        .C10(C10), .C11(C11), .C14(C14), .C15(C15), .C16(C16),
+        .C9(C9), .C13(C13), .C17(C17), .C18(C18), 
+        .C19(C19), .C20(C20), .C21(C21), .C22(C22), // 对应新的独立输入
+        .next_MAR(next_MAR),
+        .next_MBR(next_MBR),
+        .ALU_res_ACC(ALU_res_ACC),
+        .ALU_res_MR(ALU_res_MR),
+        .Flag_GEZ(ALU_Flag_GEZ),
+        .PC(PC_val), .MAR(MAR_val), .MBR(MBR_val), .IR(IR_val),
+        .ACC(ACC_val), .BR(BR_val), .MR(MR_val)
+    );
+
+    // --- 4. 端口映射 (与外部交互) ---
+    assign MAR_to_RAM = MAR_val;
+    assign MBR_to_RAM = MBR_val;
+    assign Opcode     = IR_val;    // 将 IR 的内容作为操作码反馈给 CU
+    assign Flag_GEZ   = ALU_Flag_GEZ; // 将 ALU 的状态反馈给 CU 和 PC 跳转逻辑
+
+endmodule
